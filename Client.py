@@ -15,11 +15,12 @@ from dataclasses import dataclass
 
 @dataclass
 class Client:
-    dni: str
-    name: str
-    birth_date: str
-    phone: str
-    sports: list
+    def __init__(self, dni, name, birth_date, phone, sports):
+        self.dni = dni
+        self.name = name
+        self.birth_date = birth_date
+        self.phone = phone
+        self.sports = sports
 
     def __data__(self):
         return f"""
@@ -29,7 +30,16 @@ class Client:
         Phone: {self.phone}
         """
 
-    def __sports__(self):
+
+class Registration:
+    def __init__(self, client, sport, price):
+        self.client = client
+        self.sport = sport
+        self.price = price
+
+    def __dataSports__(self, sport):
         return f"""
-        Sports: {self.sports}
+        Client: {self.client}
+        Sport: {self.sport}
         """
+

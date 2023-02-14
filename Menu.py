@@ -33,32 +33,32 @@ try:
 
     cursor.execute(
         "CREATE TABLE IF NOT EXISTS CLIENTES ("
-        "DNI VARCHAR PRIMARY KEY, NOMBRE VARCHAR, FECHA_NACIMIENTO DATE, TELEFONO VARCHAR)")
+        "dni VARCHAR PRIMARY KEY, nombre VARCHAR, fecha_nacimiento DATE, telefono VARCHAR)")
     cursor.execute(
-        "CREATE TABLE IF NOT EXISTS DEPORTES (DEPORTE VARCHAR PRIMARY KEY, PRECIO_HORA VARCHAR)")
+        "CREATE TABLE IF NOT EXISTS DEPORTES (deporte VARCHAR PRIMARY KEY, precio_hora VARCHAR)")
     cursor.execute(
         "CREATE TABLE IF NOT EXISTS CLIENTES_DEPORTES ("
-        "DNI_CLIENTE VARCHAR, DEPORTE VARCHAR, HORARIOS VARCHAR, PRIMARY KEY (DNI_CLIENTE, DEPORTE))")
+        "dni_cliente VARCHAR, deporte VARCHAR, horario VARCHAR, PRIMARY KEY (dni_cliente, deporte))")
 
     cursor.execute(
-        "INSERT INTO CLIENTES (DNI, NOMBRE, FECHA_NACIMIENTO, TELEFONO) "
+        "INSERT INTO CLIENTES (dni, nombre, fecha_nacimiento, telefono) "
         "VALUES ('12345678A', 'Juan Perez', '1990-01-01', '666666666')")
     cursor.execute(
-        "INSERT INTO CLIENTES (DNI, NOMBRE, FECHA_NACIMIENTO, TELEFONO) "
+        "INSERT INTO CLIENTES (dni, nombre, fecha_nacimiento, telefono) "
         "VALUES ('87654321B', 'Maria Lopez', '1990-01-01', '666666666')")
 
-    cursor.execute("INSERT INTO DEPORTES (DEPORTE, PRECIO_HORA) VALUES ('Tenis', '35€')")
-    cursor.execute("INSERT INTO DEPORTES (DEPORTE, PRECIO_HORA) VALUES ('Natacion', '45€')")
-    cursor.execute("INSERT INTO DEPORTES (DEPORTE, PRECIO_HORA) VALUES ('Atletismo', '20€')")
-    cursor.execute("INSERT INTO DEPORTES (DEPORTE, PRECIO_HORA) VALUES ('Baloncesto', '25€')")
-    cursor.execute("INSERT INTO DEPORTES (DEPORTE, PRECIO_HORA) VALUES ('Futbol', '30€')")
+    cursor.execute("INSERT INTO DEPORTES (deporte, precio_hora) VALUES ('Tenis', '35€')")
+    cursor.execute("INSERT INTO DEPORTES (deporte, precio_hora) VALUES ('Natacion', '45€')")
+    cursor.execute("INSERT INTO DEPORTES (deporte, precio_hora) VALUES ('Atletismo', '20€')")
+    cursor.execute("INSERT INTO DEPORTES (deporte, precio_hora) VALUES ('Baloncesto', '25€')")
+    cursor.execute("INSERT INTO DEPORTES (deporte, precio_hora) VALUES ('Futbol', '30€')")
 
     cursor.execute(
-        "INSERT INTO CLIENTES_DEPORTES (DNI_CLIENTE, DEPORTE, HORARIOS) "
+        "INSERT INTO CLIENTES_DEPORTES (dni_cliente, deporte, horario) "
         "VALUES ('12345678A', 'Tenis', '10:00-11:00')")
 
     cursor.execute(
-        "INSERT INTO CLIENTES_DEPORTES (DNI_CLIENTE, DEPORTE, HORARIOS) "
+        "INSERT INTO CLIENTES_DEPORTES (dni_cliente, deporte, horario) "
         "VALUES ('12345678A', 'Natacion', '12:00-13:00')")
 
     conex.commit()
@@ -146,7 +146,7 @@ def highSport():
         print(sports)
     name = input("Introduce el nombre del deporte: ")
     time = input("Introduce el horario: ")
-    query = "INSERT INTO CLIENTES_DEPORTES (DNI, NOMBRE, HORARIO) VALUES (%s, %s, %s)"
+    query = "INSERT INTO CLIENTES_DEPORTES (dni, nombre, horario) VALUES (%s, %s, %s)"
     cursorHighSport.execute(query, (dni, name, time))
     conex.commit()
     cursorHighSport.close()
@@ -155,42 +155,64 @@ def highSport():
 
 
 def lowSport():
-    dni = input("Introduce el DNI del cliente: ")
-    print("Deportes del cliente : \n")
-    query = "SELECT DEPORTES.nombre, DEPORTES.precio, CLIENTES_DEPORTES.horario" \
-            "FROM DEPORTES, CLIENTES_DEPORTES" \
-            "WHERE DEPORTES.nombre = CLIENTES_DEPORTES.nombre AND CLIENTES_DEPORTES.dni = %s"
-    cursorLowSport = conex.cursor()
-    cursorLowSport.execute(query, (dni,))
-    for sports in cursorLowSport:
-        print(sports)
+    try:
+        dni = input("Introduce el DNI del cliente: ")
+        cursorLowSport = conex.cursor()
+        query = "SELECT * FROM CLIENTES_DEPORTES WHERE dni_cliente = %s"
+        cursorLowSport.execute(query, (dni,))
+        client = cursorLowSport.fetchall()
+        if client is None:
+            print("El cliente no existe")
+            return
+        else:
+            print("Deportes del cliente: \n")
+            listSport = []
+            for sports in client:
+                print(sports)
+                listSport.append(sports[1])
+            sportLow = input("Introduce el deporte que quieres dar de baja: ")
+            if sportLow not in listSport:
+                print("El deporte no existe")
+                return
+            else:
+                query = "DELETE FROM CLIENTES_DEPORTES WHERE dni_cliente = %s AND deporte = %s"
+                cursorLowSport.execute(query, (dni, sportLow))
+                conex.commit()
+                cursorLowSport.close()
+                print("Deporte dado de baja correctamente!")
+                return
+    except (Exception, psycopg2.DatabaseError) as e:
+        print(f'Error {e}')
 
-    query = "DELETE FROM CLIENTES_DEPORTES WHERE DNI = %s"
-    if cursorLowSport.execute(query, (dni,)) == 0:
-        print("El cliente no existe")
-        return
-    conex.commit()
-    cursorLowSport.close()
-    print("Cliente dado de baja correctamente!")
     pass
 
 
 def sport():
     dni = input("Introduce el DNI del cliente que quieres consultar: ")
-    query = "SELECT DEPORTES.nombre, CLIENTES_DEPORTES.horario" \
-            "FROM DEPORTES, CLIENTES_DEPORTES" \
-            "WHERE DEPORTES.nombre = CLIENTES_DEPORTES.nombre AND CLIENTES_DEPORTES.dni = %s"
-
     cursorSports = conex.cursor()
+    query = "SELECT * FROM CLIENTES WHERE dni = %s"
     cursorSports.execute(query, (dni,))
-    obj = Client("", "", "", "", [])
-    for sports in cursorSports:
-        obj = (sports[0], sports[1], sports[2])
-        obj.sports.append(obj)
-
-    print(obj.__sports__())
+    conex.commit()
+    client = cursorSports.fetchone()
+    if client is None:
+        print("El cliente no existe")
+        return
+    query = "SELECT * FROM CLIENTES_DEPORTES WHERE dni_cliente = %s"
+    cursorSports.execute(query, (client[0],))
+    conex.commit()
+    listSport = cursorSports.fetchall()
+    if listSport is None:
+        print("El cliente no tiene deportes")
+    else:
+        print("Deportes del cliente: \n")
+        for sports in listSport:
+            cursorSports.execute("SELECT * FROM DEPORTES WHERE deporte = %s", (sports[1],))
+            conex.commit()
+            sportC = cursorSports.fetchone()
+            print("Deporte: " + sportC[0] + " Horario: " + sports[2])
 
     cursorSports.close()
+
     pass
 
 
